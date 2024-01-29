@@ -1,9 +1,7 @@
 package com.heavyair.agrichat.ui.screens.home
 
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.aallam.openai.api.chat.ChatCompletion
 import com.aallam.openai.api.chat.ChatCompletionChunk
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ChatMessage
@@ -11,13 +9,16 @@ import com.aallam.openai.api.chat.ChatRole
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import com.heavyair.agrichat.OpenAi.OpenAiPrompt
-import com.heavyair.agrichat.OpenAi.ResponseChatMessage
+import com.heavyair.agrichat.PreferencesHelper
+import com.heavyair.agrichat.data.ChatMessageEntity
+import com.heavyair.agrichat.data.ChatMessageRepository
+import com.heavyair.agrichat.data.ChatMessageType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 data class ChatUiState(
     val message: String = "",
@@ -27,11 +28,19 @@ data class ChatUiState(
 )
 
 
-class HomeScreenViewModel() : ViewModel() {
+class HomeScreenViewModel(
+    private val chatMessageRepository: ChatMessageRepository,
+    private val preferencesHelper: PreferencesHelper
+) : ViewModel() {
     private val _chatUiState = MutableStateFlow(ChatUiState())
     val chatUiState: StateFlow<ChatUiState> = _chatUiState.asStateFlow()
 
-    fun getCompletion() {
+    fun getCompletion(sessionId: String) {
+        addMessageToHistory(
+            sessionId,
+            _chatUiState.value.userInput.trim(),
+            ChatMessageType.SENT
+        )
         val openAI =
             OpenAI("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") // Create an instance of OpenAI
         val chatCompletionRequest = ChatCompletionRequest(
@@ -39,11 +48,11 @@ class HomeScreenViewModel() : ViewModel() {
             messages = listOf(
                 ChatMessage(
                     role = ChatRole.System,
-                    content = OpenAiPrompt.prompt
+                    content = OpenAiPrompt.systemPrompt
                 ),
                 ChatMessage(
                     role = ChatRole.User,
-                    content = _chatUiState.value.message.trim()
+                    content = _chatUiState.value.userInput.trim()
                 )
             )
         )
@@ -61,7 +70,11 @@ class HomeScreenViewModel() : ViewModel() {
                         )
                     }
 
-
+                    addMessageToHistory(
+                        sessionId,
+                        _chatUiState.value.message,
+                        ChatMessageType.SENT
+                    )
                 }
 
 //                val response = completion.choices.first().message.content
@@ -78,8 +91,29 @@ class HomeScreenViewModel() : ViewModel() {
 
     }
 
+    fun getChatHistory(sessionId: String) = chatMessageRepository.getChatMessages(sessionId)
+
+    fun addMessageToHistory(sessionId: String, content: String, type: ChatMessageType) {
+        viewModelScope.launch {
+            val chatMessage = ChatMessageEntity(
+                sessionId = sessionId,
+                content = content,
+                type = type
+            )
+            chatMessageRepository.insertChatMessage(chatMessage)
+        }
+    }
+
+    fun startNewSession() {
+        val sessionId = UUID.randomUUID().toString()
+        preferencesHelper.saveSessionId(sessionId)
+    }
+
+    fun getSessionId(): String? = preferencesHelper.getSessionId()
+
     fun onUserInputChanged(it: String) {
         _chatUiState.value = _chatUiState.value.copy(userInput = it)
     }
+
 
 }

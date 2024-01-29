@@ -22,6 +22,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.heavyair.agrichat.ui.screens.authentication.AccountViewModel
+import com.heavyair.agrichat.ui.screens.home.HomeScreenViewModel
 
 /**
  * Provides Factory to create instance of ViewModel for the entire Inventory app
@@ -32,6 +33,13 @@ object AppViewModelProvider {
         initializer {
             AccountViewModel(
                 inventoryApplication().container.accountServiceRepository
+            )
+        }
+
+        initializer {
+            HomeScreenViewModel(
+                inventoryApplication().container.chatMessageRepository,
+                PreferencesHelper(inventoryApplication())
             )
         }
     }

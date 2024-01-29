@@ -80,7 +80,7 @@ class AccountViewModel(
             if (isPasswordValidLength) null else "Password must be at least 5 characters"
 
 
-        return isEmailValid && isPasswordValid
+        return isEmailValid && isPasswordValid && isPasswordValidLength && isEmailValidFormat
     }
 
     fun loginUser(email: String, password: String) {

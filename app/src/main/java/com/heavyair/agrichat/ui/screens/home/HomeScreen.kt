@@ -8,12 +8,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowCircleUp
@@ -22,7 +23,6 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,14 +39,10 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -58,6 +54,9 @@ import com.heavyair.agrichat.R
 import com.heavyair.agrichat.ui.navigation.HomeDestination
 import kotlinx.coroutines.launch
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.heavyair.agrichat.AppViewModelProvider
+import com.heavyair.agrichat.data.ChatMessageEntity
+import com.heavyair.agrichat.data.ChatMessageType
 
 @Composable
 fun DrawerContent() {
@@ -78,17 +77,26 @@ fun DrawerContent() {
 
 @Composable
 fun HomeScreen(
-    viewModel: HomeScreenViewModel = viewModel()
+    viewModel: HomeScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
+    var sessionId = viewModel.getSessionId()
+    if (sessionId == null) {
+        viewModel.startNewSession()
+        sessionId = viewModel.getSessionId()!!
+    }
     val chatUiState by viewModel.chatUiState.collectAsState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val chatHistory by viewModel.getChatHistory(sessionId).collectAsState(initial = emptyList())
+
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet { DrawerContent() }
         },
     ) {
+//        val scrollState = rememberScrollState()
         val context = LocalContext.current
         Scaffold(
             topBar = {
@@ -103,19 +111,6 @@ fun HomeScreen(
                     }
                 )
             },
-//            floatingActionButton = {
-//                ExtendedFloatingActionButton(
-//                    text = { Text("Show drawer") },
-//                    icon = { Icon(Icons.Filled.Add, contentDescription = "") },
-//                    onClick = {
-//                        scope.launch {
-//                            drawerState.apply {
-//                                if (isClosed) open() else close()
-//                            }
-//                        }
-//                    }
-//                )
-//            }
         ) { contentPadding ->
             Box(
                 modifier = Modifier
@@ -136,23 +131,16 @@ fun HomeScreen(
 
 //                    Divider()
                     Column(
-                    ) {
+                        Modifier.weight(1f, fill = true),
+
+                        ) {
                         MessagesSection(
-                            chatUiState = chatUiState
+                            chatUiState = chatUiState,
+                            chatHistory = chatHistory
                         )
 
                     }
-                    Spacer(
-                        Modifier.weight(1f, fill = true),
-                    )
-                    if (chatUiState.loading) {
-                        Text(text = "loading...")
-                        CircularProgressIndicator()
-                    }
 
-                    if (chatUiState.message.isNotEmpty()) {
-                        Text(text = "response: ${chatUiState.message}")
-                    }
                     // buttom promt input section with send button
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -196,7 +184,10 @@ fun HomeScreen(
                                     }
                                 } else {
                                     IconButton(onClick = {
-                                        viewModel.getCompletion()
+                                        viewModel.getCompletion(
+                                            sessionId
+                                        )
+                                        viewModel.onUserInputChanged("")
                                     }) {
                                         Icon(
                                             imageVector = Icons.Filled.ArrowCircleUp,
@@ -223,16 +214,21 @@ fun HomeScreen(
 
 
 @Composable
-fun MessagesSection(chatUiState: ChatUiState) {
-    if (chatUiState.message.isNotEmpty()) {
-        MessageCard(chatUiState)
+fun MessagesSection(chatUiState: ChatUiState, chatHistory: List<ChatMessageEntity>) {
+    LazyColumn {
+        items(chatHistory) { chatMessage ->
+            MessageCard(
+                chatUiState = chatUiState,
+                chatMessage = chatMessage
+            )
+        }
     }
-
 }
 
 @Composable
 fun MessageCard(
-    chatUiState: ChatUiState
+    chatUiState: ChatUiState,
+    chatMessage: ChatMessageEntity
 ) {
     Card(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -252,7 +248,12 @@ fun MessageCard(
             horizontalArrangement = Arrangement.Start
         ) {
             Image(
-                painter = painterResource(id = R.drawable.person),
+                painter = painterResource(
+                    id = when (chatMessage.type) {
+                        ChatMessageType.SENT -> R.drawable.person
+                        ChatMessageType.RECEIVED -> R.drawable.agribot
+                    }
+                ),
                 contentDescription = null,
                 modifier = Modifier
                     .size(24.dp)
@@ -262,9 +263,14 @@ fun MessageCard(
             Column(
                 modifier = Modifier.padding(start = 8.dp)
             ) {
-                Text(text = "You")
+                Text(
+                    text = when (chatMessage.type) {
+                        ChatMessageType.SENT -> "You"
+                        ChatMessageType.RECEIVED -> "AgriChat"
+                    }
+                )
                 Divider()
-                Text(text = chatUiState.message)
+                Text(text = chatMessage.content)
             }
         }
     }
