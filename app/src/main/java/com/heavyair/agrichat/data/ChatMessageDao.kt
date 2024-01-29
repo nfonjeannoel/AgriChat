@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -14,6 +15,13 @@ interface ChatMessageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChatMessage(chatMessage: ChatMessageEntity)
 
+    @Update(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun updateChatMessage(chatMessage: ChatMessageEntity)
+
     @Query("DELETE FROM chat_messages_entity WHERE sessionId = :sessionId")
     suspend fun deleteChatMessages(sessionId: String)
+
+
+    @Query("SELECT * FROM chat_messages_entity ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getLatestMessage(): ChatMessageEntity
 }

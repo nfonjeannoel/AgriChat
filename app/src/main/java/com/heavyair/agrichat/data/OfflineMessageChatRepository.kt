@@ -13,4 +13,12 @@ class OfflineMessageChatRepository(
 
     override suspend fun deleteChatMessages(sessionId: String) =
         chatMessageDao.deleteChatMessages(sessionId)
+
+    override suspend fun getLatestMessage(): ChatMessageEntity {
+        return chatMessageDao.getLatestMessage()
+    }
+
+    override suspend fun updateChatMessage(chatMessage: ChatMessageEntity) {
+        return chatMessageDao.updateChatMessage(chatMessage)
+    }
 }

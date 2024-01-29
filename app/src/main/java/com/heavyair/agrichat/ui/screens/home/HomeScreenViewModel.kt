@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonNull.content
 import java.util.UUID
 
 data class ChatUiState(
@@ -41,6 +42,12 @@ class HomeScreenViewModel(
             _chatUiState.value.userInput.trim(),
             ChatMessageType.SENT
         )
+//        val chatMessage = ChatMessageEntity(
+//            sessionId = sessionId,
+//            content = "",
+//            type = ChatMessageType.RECEIVED
+//        )
+//        addMessageToHistory(chatMessage)
         val openAI =
             OpenAI("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") // Create an instance of OpenAI
         val chatCompletionRequest = ChatCompletionRequest(
@@ -59,6 +66,8 @@ class HomeScreenViewModel(
 
         viewModelScope.launch {
             _chatUiState.value = _chatUiState.value.copy(loading = true)
+//            val lastMessage = chatMessageRepository.getLatestMessage()
+
             try {
                 val completions: Flow<ChatCompletionChunk> =
                     openAI.chatCompletions(chatCompletionRequest)
@@ -66,16 +75,22 @@ class HomeScreenViewModel(
                     val response = completionChunk.choices[0].delta.content
                     response?.let {
                         _chatUiState.value = _chatUiState.value.copy(
-                            message = _chatUiState.value.message + it
+                            message = _chatUiState.value.message + it,
+                            loading = _chatUiState.value.loading,
+                            userInput = _chatUiState.value.userInput,
+                            error = _chatUiState.value.error
                         )
                     }
-
-                    addMessageToHistory(
-                        sessionId,
-                        _chatUiState.value.message,
-                        ChatMessageType.SENT
-                    )
                 }
+                addMessageToHistory(
+                    sessionId,
+                    _chatUiState.value.message,
+                    ChatMessageType.RECEIVED
+                )
+
+//                lastMessage.content = _chatUiState.value.message
+//                updateChatMessage(lastMessage)
+
 
 //                val response = completion.choices.first().message.content
 //                response?.let {
@@ -84,12 +99,28 @@ class HomeScreenViewModel(
                 _chatUiState.value = _chatUiState.value.copy(loading = false, error = "")
             } catch (e: Exception) {
                 _chatUiState.value = _chatUiState.value.copy(error = e.message, loading = false)
+//                deleteChatMessage(chatMessage)
 
             }
+            _chatUiState.value = ChatUiState()
 
         }
 
     }
+
+    private fun deleteChatMessage(chatMessage: ChatMessageEntity) {
+        viewModelScope.launch {
+            chatMessageRepository.deleteChatMessages(chatMessage.sessionId)
+        }
+    }
+
+
+    private fun updateChatMessage(chatMessage: ChatMessageEntity) {
+        viewModelScope.launch {
+            chatMessageRepository.updateChatMessage(chatMessage)
+        }
+    }
+
 
     fun getChatHistory(sessionId: String) = chatMessageRepository.getChatMessages(sessionId)
 
@@ -100,6 +131,13 @@ class HomeScreenViewModel(
                 content = content,
                 type = type
             )
+            chatMessageRepository.insertChatMessage(chatMessage)
+        }
+    }
+
+
+    fun addMessageToHistory(chatMessage: ChatMessageEntity) {
+        viewModelScope.launch {
             chatMessageRepository.insertChatMessage(chatMessage)
         }
     }

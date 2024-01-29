@@ -8,7 +8,7 @@ data class ChatMessageEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val sessionId: String,
-    val content: String,
+    var content: String,
     val type: ChatMessageType,
     val timestamp: Long = System.currentTimeMillis()
 )

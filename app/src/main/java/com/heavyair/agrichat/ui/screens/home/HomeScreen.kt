@@ -2,6 +2,14 @@ package com.heavyair.agrichat.ui.screens.home
 
 import android.widget.Toast
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +23,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowCircleUp
@@ -39,6 +48,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +58,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.heavyair.agrichat.R
@@ -213,29 +224,59 @@ fun HomeScreen(
 }
 
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun MessagesSection(chatUiState: ChatUiState, chatHistory: List<ChatMessageEntity>) {
-    LazyColumn {
-        items(chatHistory) { chatMessage ->
-            MessageCard(
-                chatUiState = chatUiState,
-                chatMessage = chatMessage
-            )
+    val visibleState = remember {
+        MutableTransitionState(false).apply {
+            // Start the animation immediately.
+            targetState = true
         }
+    }
+    AnimatedVisibility(
+        visibleState = visibleState,
+        enter = fadeIn(
+            animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
+        ),
+        exit = fadeOut(),
+    ) {
+        LazyColumn {
+            itemsIndexed(chatHistory) { index, chatMessage ->
+                MessageCard(
+                    chatUiState = chatUiState,
+                    chatMessage = chatMessage,
+                    shouldStream = index == chatHistory.size - 1,
+                    modifier = Modifier
+                        // Animate each list item to slide in vertically
+                        .animateEnterExit(
+                            enter = slideInVertically(
+                                animationSpec = spring(
+                                    stiffness = Spring.StiffnessVeryLow,
+                                    dampingRatio = Spring.DampingRatioLowBouncy
+                                ),
+                                initialOffsetY = { it * (index + 1) } // staggered entrance
+                            )
+                        )
+                )
+            }
+        }
+
     }
 }
 
 @Composable
 fun MessageCard(
     chatUiState: ChatUiState,
-    chatMessage: ChatMessageEntity
+    chatMessage: ChatMessageEntity,
+    shouldStream: Boolean,
+    modifier: Modifier = Modifier
 ) {
     Card(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = RoundedCornerShape(0.dp),
         border = null,
-        modifier = Modifier
-            .padding(8.dp)
+        modifier = modifier
+//            .padding(8.dp)
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.tertiaryContainer)
@@ -267,12 +308,20 @@ fun MessageCard(
                     text = when (chatMessage.type) {
                         ChatMessageType.SENT -> "You"
                         ChatMessageType.RECEIVED -> "AgriChat"
-                    }
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
                 )
                 Divider()
-                Text(text = chatMessage.content)
+                if (chatUiState.loading && shouldStream) {
+                    Text(text = chatUiState.message)
+                } else {
+                    Text(text = chatMessage.content)
+                }
             }
         }
+
+
     }
 }
 
@@ -300,6 +349,7 @@ fun HomeTopAppBar(
                 )
             }
         },
+
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
             containerColor = MaterialTheme.colorScheme.primary,
         ),
