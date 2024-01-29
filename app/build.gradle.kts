@@ -82,6 +82,15 @@ dependencies {
 //    ksp("androidx.room:room-compiler:${rootProject.extra["room_version"]}")
     implementation("androidx.room:room-ktx:${rootProject.extra["room_version"]}")
 
+    implementation("com.aallam.openai:openai-client:3.6.3")
+
+    // import Kotlin API client BOM
+    implementation(platform("com.aallam.openai:openai-client-bom:3.6.3"))
+
+    // define dependencies without versions
+    implementation("com.aallam.openai:openai-client")
+    runtimeOnly("io.ktor:ktor-client-okhttp")
+
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

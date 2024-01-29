@@ -1,5 +1,6 @@
 package com.heavyair.agrichat.ui.screens.home
 
+import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -8,47 +9,36 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowCircleUp
-import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.outlined.ArrowUpward
-import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -57,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -66,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import com.heavyair.agrichat.R
 import com.heavyair.agrichat.ui.navigation.HomeDestination
 import kotlinx.coroutines.launch
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun DrawerContent() {
@@ -85,7 +77,10 @@ fun DrawerContent() {
 
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    viewModel: HomeScreenViewModel = viewModel()
+) {
+    val chatUiState by viewModel.chatUiState.collectAsState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     ModalNavigationDrawer(
@@ -94,6 +89,7 @@ fun HomeScreen() {
             ModalDrawerSheet { DrawerContent() }
         },
     ) {
+        val context = LocalContext.current
         Scaffold(
             topBar = {
                 HomeTopAppBar(
@@ -138,18 +134,25 @@ fun HomeScreen() {
                         .background(MaterialTheme.colorScheme.surface)
                 ) {
 
-                    var promptText by remember {
-                        mutableStateOf("")
-                    }
 //                    Divider()
-                    Column (
-                    ){
-                        MessagesSection()
+                    Column(
+                    ) {
+                        MessagesSection(
+                            chatUiState = chatUiState
+                        )
 
                     }
                     Spacer(
                         Modifier.weight(1f, fill = true),
                     )
+                    if (chatUiState.loading) {
+                        Text(text = "loading...")
+                        CircularProgressIndicator()
+                    }
+
+                    if (chatUiState.message.isNotEmpty()) {
+                        Text(text = "response: ${chatUiState.message}")
+                    }
                     // buttom promt input section with send button
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -157,8 +160,9 @@ fun HomeScreen() {
                             .padding(4.dp)
                     ) {
                         OutlinedTextField(
-                            value = promptText, onValueChange = {
-                                promptText = it
+                            value = chatUiState.userInput,
+                            onValueChange = {
+                                viewModel.onUserInputChanged(it)
                             },
                             modifier = Modifier
                                 .weight(1f, fill = true)
@@ -174,14 +178,34 @@ fun HomeScreen() {
                                 )
                             },
                             trailingIcon = {
-                                IconButton(onClick = { /*TODO*/ }) {
-                                    Icon(
-                                        imageVector = Icons.Filled.ArrowCircleUp,
-                                        contentDescription = "menu",
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                    )
+                                if (chatUiState.userInput.trim().isEmpty()) {
+                                    IconButton(onClick = {
+                                        Toast.makeText(
+                                            context,
+                                            "Coming soon",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Filled.AttachFile,
+                                            contentDescription = "attachment",
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                        )
+                                    }
+                                } else {
+                                    IconButton(onClick = {
+                                        viewModel.getCompletion()
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Filled.ArrowCircleUp,
+                                            contentDescription = "menu",
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                        )
+                                    }
                                 }
                             }
 
@@ -199,24 +223,16 @@ fun HomeScreen() {
 
 
 @Composable
-fun MessagesSection() {
-    MessageCard(
-        avatar = painterResource(id = R.drawable.ic_launcher_foreground),
-        username = "You",
-        message = "hi there"
-    )
-    MessageCard(
-        avatar = painterResource(id = R.drawable.ic_launcher_foreground),
-        username = "AgriChat",
-        message = "Hello! How can I assist you today? Hello! How can I assist you today? Hello! How can I assist you today?"
-    )
+fun MessagesSection(chatUiState: ChatUiState) {
+    if (chatUiState.message.isNotEmpty()) {
+        MessageCard(chatUiState)
+    }
+
 }
 
 @Composable
 fun MessageCard(
-    avatar: Painter,
-    username: String,
-    message: String
+    chatUiState: ChatUiState
 ) {
     Card(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -239,7 +255,7 @@ fun MessageCard(
                 painter = painterResource(id = R.drawable.person),
                 contentDescription = null,
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(24.dp)
                     .align(Alignment.Top)
             )
 
@@ -248,7 +264,7 @@ fun MessageCard(
             ) {
                 Text(text = "You")
                 Divider()
-                Text(text = "hi there sdfsdfsdkhfgsdkfjsd,hsdvf.dlsjf/lsdjfsdjfs")
+                Text(text = chatUiState.message)
             }
         }
     }
