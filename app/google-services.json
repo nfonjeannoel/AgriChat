@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "183220617832",
+    "project_id": "agrichat-dc47c",
+    "storage_bucket": "agrichat-dc47c.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:183220617832:android:cf34ae3133a195b0edb1dd",
+        "android_client_info": {
+          "package_name": "com.heavyair.agrichat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCXyVXOXjPzZP93Kc0fmfAy8e1ox6hgmMg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
