@@ -24,4 +24,9 @@ interface ChatMessageDao {
 
     @Query("SELECT * FROM chat_messages_entity ORDER BY timestamp DESC LIMIT 1")
     suspend fun getLatestMessage(): ChatMessageEntity
+
+
+    // get session history to display in history screen. Return a list of SessionId and the first message of each session
+    @Query("SELECT sessionId, content FROM chat_messages_entity GROUP BY sessionId ORDER BY timestamp DESC LIMIT 20")
+    fun getSessionHistory(): Flow<List<SessionHistory>>
 }

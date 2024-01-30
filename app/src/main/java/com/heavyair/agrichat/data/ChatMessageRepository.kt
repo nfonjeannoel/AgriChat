@@ -10,4 +10,6 @@ interface ChatMessageRepository {
     suspend fun getLatestMessage(): ChatMessageEntity
 
     suspend fun updateChatMessage(chatMessage: ChatMessageEntity)
+
+    fun getSessionHistory(): Flow<List<SessionHistory>>
 }

@@ -1,5 +1,6 @@
 package com.heavyair.agrichat.ui.screens.home
 
+import androidx.compose.runtime.MutableState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aallam.openai.api.chat.ChatCompletionChunk
@@ -13,10 +14,13 @@ import com.heavyair.agrichat.PreferencesHelper
 import com.heavyair.agrichat.data.ChatMessageEntity
 import com.heavyair.agrichat.data.ChatMessageRepository
 import com.heavyair.agrichat.data.ChatMessageType
+import com.heavyair.agrichat.data.SessionHistory
+import com.heavyair.agrichat.services.AccountServiceRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonNull.content
 import java.util.UUID
@@ -31,10 +35,18 @@ data class ChatUiState(
 
 class HomeScreenViewModel(
     private val chatMessageRepository: ChatMessageRepository,
-    private val preferencesHelper: PreferencesHelper
+    private val preferencesHelper: PreferencesHelper,
+    private val accountServiceRepository: AccountServiceRepository
 ) : ViewModel() {
     private val _chatUiState = MutableStateFlow(ChatUiState())
     val chatUiState: StateFlow<ChatUiState> = _chatUiState.asStateFlow()
+
+    private val _sessionId = MutableStateFlow("")
+    val sessionId: StateFlow<String> = _sessionId.asStateFlow()
+
+    private val _chatSessionHistory: MutableStateFlow<List<SessionHistory>> =
+        MutableStateFlow(listOf())
+    val chatSessionHistory: MutableStateFlow<List<SessionHistory>> = _chatSessionHistory
 
     fun getCompletion(sessionId: String) {
         addMessageToHistory(
@@ -124,6 +136,8 @@ class HomeScreenViewModel(
 
     fun getChatHistory(sessionId: String) = chatMessageRepository.getChatMessages(sessionId)
 
+    fun getSessionHistory() = chatMessageRepository.getSessionHistory()
+
     fun addMessageToHistory(sessionId: String, content: String, type: ChatMessageType) {
         viewModelScope.launch {
             val chatMessage = ChatMessageEntity(
@@ -145,12 +159,22 @@ class HomeScreenViewModel(
     fun startNewSession() {
         val sessionId = UUID.randomUUID().toString()
         preferencesHelper.saveSessionId(sessionId)
+        _sessionId.value = sessionId
     }
 
     fun getSessionId(): String? = preferencesHelper.getSessionId()
 
     fun onUserInputChanged(it: String) {
         _chatUiState.value = _chatUiState.value.copy(userInput = it)
+    }
+
+    fun setSessionId(sessionId: String) {
+        _sessionId.value = sessionId
+    }
+
+    fun logout() {
+        preferencesHelper.clearSessionId()
+        accountServiceRepository.signOut()
     }
 
 

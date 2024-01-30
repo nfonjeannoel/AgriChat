@@ -12,4 +12,8 @@ class PreferencesHelper(context: Context) {
     fun getSessionId(): String? {
         return sharedPreferences.getString("SESSION_ID", null)
     }
+
+    fun clearSessionId() {
+        sharedPreferences.edit().remove("SESSION_ID").apply()
+    }
 }

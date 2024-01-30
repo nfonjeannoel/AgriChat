@@ -110,7 +110,16 @@ fun AgriChatNavHost(
             }
 
             composable(HomeDestination.route) {
-                HomeScreen()
+                HomeScreen(
+                    onSignOut = {
+                        navController.navigate(LoginDestination.route) {
+                            // on back press, close the app
+                            popUpTo(HomeDestination.route) {
+                                inclusive = true
+                            }
+                        }
+                    }
+                )
             }
         }
     }

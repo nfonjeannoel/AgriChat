@@ -17,3 +17,9 @@ data class ChatMessageEntity(
 enum class ChatMessageType {
     SENT, RECEIVED
 }
+
+
+data class SessionHistory(
+    val sessionId: String,
+    val content: String
+)

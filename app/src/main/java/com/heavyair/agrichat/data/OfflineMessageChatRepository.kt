@@ -21,4 +21,8 @@ class OfflineMessageChatRepository(
     override suspend fun updateChatMessage(chatMessage: ChatMessageEntity) {
         return chatMessageDao.updateChatMessage(chatMessage)
     }
+
+    override fun getSessionHistory(): Flow<List<SessionHistory>> {
+        return chatMessageDao.getSessionHistory()
+    }
 }

@@ -6,6 +6,9 @@ import com.google.firebase.ktx.Firebase
 
 
 class FirebaseAccountService : AccountServiceRepository {
+    override fun signOut() {
+        Firebase.auth.signOut()
+    }
 
     override fun signInWithEmailAndPassword(
         email: String,

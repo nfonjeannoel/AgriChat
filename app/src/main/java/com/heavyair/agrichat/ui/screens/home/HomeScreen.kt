@@ -1,5 +1,6 @@
 package com.heavyair.agrichat.ui.screens.home
 
+import android.util.Log
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
@@ -12,15 +13,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -35,8 +34,6 @@ import androidx.compose.material.icons.filled.ArrowCircleUp
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material.icons.outlined.Sms
 import androidx.compose.material.icons.outlined.Subscriptions
@@ -59,6 +56,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -66,7 +64,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -74,19 +71,31 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.heavyair.agrichat.R
 import com.heavyair.agrichat.ui.navigation.HomeDestination
 import kotlinx.coroutines.launch
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.auth
 import com.heavyair.agrichat.AppViewModelProvider
 import com.heavyair.agrichat.data.ChatMessageEntity
 import com.heavyair.agrichat.data.ChatMessageType
+import com.heavyair.agrichat.data.SessionHistory
+import kotlinx.serialization.json.JsonNull.content
 
 @Composable
-fun DrawerContent() {
+fun DrawerContent(
+    onNewChatClicked: () -> Unit,
+    onHistorySessionClicked: (String) -> Unit,
+    sessionHistory: List<SessionHistory>,
+    onLogout: () -> Unit,
+    currentUser: FirebaseUser?
+) {
+    Log.d("DrawerContent", "sessionHistory: $sessionHistory")
     Column(
         modifier = Modifier
             .wrapContentWidth()
@@ -106,7 +115,12 @@ fun DrawerContent() {
             contentScale = ContentScale.Crop
         )
         NavDrawerLine()
-        NavDrawerItem(onItemClick = { }, menuName = "New Chat", navIcon = Icons.Outlined.Sms)
+
+        NavDrawerItem(
+            onItemClick = { onNewChatClicked() },
+            menuName = "New Chat",
+            navIcon = Icons.Outlined.Sms
+        )
         NavDrawerItem(
             onItemClick = { },
             menuName = "Purchase",
@@ -118,9 +132,47 @@ fun DrawerContent() {
             navIcon = Icons.Outlined.Subscriptions
         )
         NavDrawerLine()
-        //
-        Spacer(modifier = Modifier.weight(1f, fill = true))
-        NavDrawerItem(onItemClick = { }, menuName = "Logout", navIcon = Icons.Filled.Logout)
+        Text(
+            text = "Chat History",
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .padding(8.dp)
+        )
+        LazyColumn(modifier = Modifier.weight(1f, fill = true)) {
+
+            itemsIndexed(sessionHistory) { index, historySession ->
+                TextButton(
+                    onClick = { onHistorySessionClicked(historySession.sessionId) },
+                ) {
+//                    Text(text = "${it.content} ")
+                    // crop it.content to about 10 words and add ... at the end. If smaller, add the it.sessionId
+                    val content =
+                        "${index + 1}. ${historySession.content} ${historySession.sessionId}"
+                    Text(
+                        text = content,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .padding(end = 4.dp)
+                            .widthIn(max = 200.dp)
+                    )
+
+                }
+            }
+        }
+        currentUser?.email?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        NavDrawerLine()
+        NavDrawerItem(
+            onItemClick = { onLogout() },
+            menuName = "Logout",
+            navIcon = Icons.Filled.Logout
+        )
 
 
     }
@@ -170,23 +222,65 @@ fun NavDrawerItem(
 
 @Composable
 fun HomeScreen(
+    onSignOut: () -> Unit,
     viewModel: HomeScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    var sessionId = viewModel.getSessionId()
-    if (sessionId == null) {
-        viewModel.startNewSession()
-        sessionId = viewModel.getSessionId()!!
+//    var sessionId = viewModel.getSessionId()
+//    if (sessionId == null) {
+//        viewModel.startNewSession()
+//        sessionId = viewModel.getSessionId()!!
+//    }
+    val sessionId by viewModel.sessionId.collectAsState()
+    LaunchedEffect(key1 = sessionId) {
+        val currentSessionId = viewModel.getSessionId()
+        if (currentSessionId == null) {
+            viewModel.startNewSession()
+            viewModel.setSessionId(viewModel.getSessionId()!!)
+        }
     }
     val chatUiState by viewModel.chatUiState.collectAsState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val chatHistory by viewModel.getChatHistory(sessionId).collectAsState(initial = emptyList())
-
+    val sessionHistory by viewModel.getSessionHistory().collectAsState(initial = emptyList())
+    val currentUser = remember {
+        Firebase.auth.currentUser
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet { DrawerContent() }
+            ModalDrawerSheet {
+                DrawerContent(
+                    onNewChatClicked = {
+                        viewModel.startNewSession()
+                        scope.launch {
+                            drawerState.apply {
+                                if (isClosed) open() else close()
+                            }
+                        }
+                    },
+                    sessionHistory = sessionHistory,
+                    onHistorySessionClicked = { sessionId ->
+                        viewModel.setSessionId(sessionId)
+                        scope.launch {
+                            drawerState.apply {
+                                if (isClosed) open() else close()
+                            }
+                        }
+                    },
+                    onLogout = {
+                        scope.launch {
+                            drawerState.apply {
+                                if (isClosed) open() else close()
+                            }
+                        }
+                        viewModel.logout()
+                        onSignOut()
+                    },
+                    currentUser = currentUser
+                )
+            }
         },
     ) {
 //        val scrollState = rememberScrollState()
@@ -331,13 +425,7 @@ fun MessagesSection(chatUiState: ChatUiState, chatHistory: List<ChatMessageEntit
                     modifier = Modifier
                         // Animate each list item to slide in vertically
                         .animateEnterExit(
-                            enter = slideInVertically(
-                                animationSpec = spring(
-                                    stiffness = Spring.StiffnessVeryLow,
-                                    dampingRatio = Spring.DampingRatioLowBouncy
-                                ),
-                                initialOffsetY = { it * (index + 1) } // staggered entrance
-                            )
+                            enter = slideInVertically()
                         )
                 )
             }
@@ -354,13 +442,14 @@ fun MessageCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(0.dp),
         border = null,
         modifier = modifier
 //            .padding(8.dp)
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.small)
+            .displayCutoutPadding()
+//            .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.tertiaryContainer)
     ) {
         Row(
@@ -394,7 +483,7 @@ fun MessageCard(
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
                 )
-                Divider()
+//                Divider()
                 Text(text = chatMessage.content)
 
                 if (chatUiState.loading && shouldStream) {
