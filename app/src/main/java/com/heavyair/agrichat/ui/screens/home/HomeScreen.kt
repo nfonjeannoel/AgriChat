@@ -12,14 +12,19 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,10 +33,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowCircleUp
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Sms
+import androidx.compose.material.icons.outlined.ShoppingCart
+import androidx.compose.material.icons.outlined.Sms
+import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,6 +55,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -53,6 +66,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -75,13 +91,79 @@ fun DrawerContent() {
         modifier = Modifier
             .wrapContentWidth()
             .padding(16.dp)
+
     ) {
-        Text(
-            text = stringResource(id = R.string.app_name),
-            style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold),
-            modifier = Modifier.padding(bottom = 16.dp)
+        // App Logo
+        Image(
+            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+            contentDescription = null,
+            modifier = Modifier
+                .size(120.dp)
+                .padding(16.dp)
+                .wrapContentHeight(Alignment.CenterVertically)
+                .align(Alignment.CenterHorizontally),
+
+            contentScale = ContentScale.Crop
         )
-        // Add more items or content here
+        NavDrawerLine()
+        NavDrawerItem(onItemClick = { }, menuName = "New Chat", navIcon = Icons.Outlined.Sms)
+        NavDrawerItem(
+            onItemClick = { },
+            menuName = "Purchase",
+            navIcon = Icons.Outlined.ShoppingCart
+        )
+        NavDrawerItem(
+            onItemClick = { },
+            menuName = "Subscription",
+            navIcon = Icons.Outlined.Subscriptions
+        )
+        NavDrawerLine()
+        //
+        Spacer(modifier = Modifier.weight(1f, fill = true))
+        NavDrawerItem(onItemClick = { }, menuName = "Logout", navIcon = Icons.Filled.Logout)
+
+
+    }
+}
+
+@Composable
+fun NavDrawerLine() {
+    Divider(
+        modifier = Modifier
+            .widthIn(max = 200.dp)
+    )
+}
+
+@Composable
+fun NavDrawerItem(
+    onItemClick: () -> Unit,
+    menuName: String,
+    navIcon: ImageVector
+) {
+    TextButton(onClick = { onItemClick() }) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .padding(vertical = 4.dp)
+
+        ) {
+            Icon(
+                imageVector = navIcon,
+                contentDescription = menuName,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .size(26.dp)
+            )
+            Text(
+                text = menuName,
+                style = TextStyle(
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
+                modifier = Modifier
+                    .padding(start = 8.dp)
+            )
+        }
     }
 }
 
@@ -313,11 +395,12 @@ fun MessageCard(
                     fontWeight = FontWeight.Bold,
                 )
                 Divider()
+                Text(text = chatMessage.content)
+
                 if (chatUiState.loading && shouldStream) {
-                    Text(text = chatUiState.message)
-                } else {
-                    Text(text = chatMessage.content)
+                    CircularProgressIndicator()
                 }
+
             }
         }
 

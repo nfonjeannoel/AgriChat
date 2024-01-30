@@ -2,7 +2,7 @@
 <resources>
     <style name="Theme.AgriChat.MySplash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">#ffffff</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/splah_icon</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/agrichat</item>
         <item name="postSplashScreenTheme">@style/Theme.AgriChat</item>
     </style>
 </resources>
