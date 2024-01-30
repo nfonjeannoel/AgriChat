@@ -95,7 +95,6 @@ fun DrawerContent(
     onLogout: () -> Unit,
     currentUser: FirebaseUser?
 ) {
-    Log.d("DrawerContent", "sessionHistory: $sessionHistory")
     Column(
         modifier = Modifier
             .wrapContentWidth()
@@ -104,7 +103,7 @@ fun DrawerContent(
     ) {
         // App Logo
         Image(
-            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+            painter = painterResource(id = R.drawable.agrichat_load_logo),
             contentDescription = null,
             modifier = Modifier
                 .size(120.dp)
@@ -231,13 +230,6 @@ fun HomeScreen(
 //        sessionId = viewModel.getSessionId()!!
 //    }
     val sessionId by viewModel.sessionId.collectAsState()
-    LaunchedEffect(key1 = sessionId) {
-        val currentSessionId = viewModel.getSessionId()
-        if (currentSessionId == null) {
-            viewModel.startNewSession()
-            viewModel.setSessionId(viewModel.getSessionId()!!)
-        }
-    }
     val chatUiState by viewModel.chatUiState.collectAsState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -346,6 +338,7 @@ fun HomeScreen(
                                 .padding(start = 16.dp, end = 16.dp),
                             shape = MaterialTheme.shapes.large,
                             maxLines = 2,
+                            enabled = !chatUiState.loading,
                             placeholder = {
                                 Text(
                                     text = stringResource(id = R.string.type_a_message),
@@ -374,7 +367,7 @@ fun HomeScreen(
                                         viewModel.getCompletion(
                                             sessionId
                                         )
-                                        viewModel.onUserInputChanged("")
+//                                        viewModel.onUserInputChanged("")
                                     }) {
                                         Icon(
                                             imageVector = Icons.Filled.ArrowCircleUp,
@@ -487,7 +480,42 @@ fun MessageCard(
                 Text(text = chatMessage.content)
 
                 if (chatUiState.loading && shouldStream) {
-                    CircularProgressIndicator()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+//                        Image(
+//                            painter = painterResource(
+//                                id = R.drawable.agribot
+//                            ),
+//                            contentDescription = null,
+//                            modifier = Modifier
+//                                .size(24.dp)
+//                                .align(Alignment.Top)
+//                        )
+
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .align(Alignment.Top)
+                        )
+
+                        Column(
+                            modifier = Modifier.padding(start = 8.dp)
+                        ) {
+                            Text(
+                                text = "AgriChat",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(text = chatUiState.message)
+
+
+                        }
+                    }
                 }
 
             }

@@ -39,7 +39,6 @@ object AppViewModelProvider {
         initializer {
             HomeScreenViewModel(
                 inventoryApplication().container.chatMessageRepository,
-                PreferencesHelper(inventoryApplication()),
                 accountServiceRepository = inventoryApplication().container.accountServiceRepository
             )
         }

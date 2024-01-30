@@ -8,6 +8,10 @@ class OfflineMessageChatRepository(
     override fun getChatMessages(sessionId: String): Flow<List<ChatMessageEntity>> =
         chatMessageDao.getChatMessages(sessionId)
 
+    override suspend fun getChatMessagesSuspend(sessionId: String): List<ChatMessageEntity> {
+        return chatMessageDao.getChatMessagesSuspend(sessionId)
+    }
+
     override suspend fun insertChatMessage(chatMessage: ChatMessageEntity) =
         chatMessageDao.insertChatMessage(chatMessage)
 

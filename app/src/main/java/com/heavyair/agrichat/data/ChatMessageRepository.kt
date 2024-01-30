@@ -12,4 +12,6 @@ interface ChatMessageRepository {
     suspend fun updateChatMessage(chatMessage: ChatMessageEntity)
 
     fun getSessionHistory(): Flow<List<SessionHistory>>
+
+    suspend fun getChatMessagesSuspend(sessionId: String): List<ChatMessageEntity>
 }

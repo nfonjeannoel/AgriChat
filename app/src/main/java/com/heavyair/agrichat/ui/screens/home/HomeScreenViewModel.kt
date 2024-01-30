@@ -1,5 +1,6 @@
 package com.heavyair.agrichat.ui.screens.home
 
+import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,7 +11,6 @@ import com.aallam.openai.api.chat.ChatRole
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import com.heavyair.agrichat.OpenAi.OpenAiPrompt
-import com.heavyair.agrichat.PreferencesHelper
 import com.heavyair.agrichat.data.ChatMessageEntity
 import com.heavyair.agrichat.data.ChatMessageRepository
 import com.heavyair.agrichat.data.ChatMessageType
@@ -35,7 +35,6 @@ data class ChatUiState(
 
 class HomeScreenViewModel(
     private val chatMessageRepository: ChatMessageRepository,
-    private val preferencesHelper: PreferencesHelper,
     private val accountServiceRepository: AccountServiceRepository
 ) : ViewModel() {
     private val _chatUiState = MutableStateFlow(ChatUiState())
@@ -44,40 +43,85 @@ class HomeScreenViewModel(
     private val _sessionId = MutableStateFlow("")
     val sessionId: StateFlow<String> = _sessionId.asStateFlow()
 
-    private val _chatSessionHistory: MutableStateFlow<List<SessionHistory>> =
-        MutableStateFlow(listOf())
-    val chatSessionHistory: MutableStateFlow<List<SessionHistory>> = _chatSessionHistory
+    //    private val _chatSessionHistory: MutableStateFlow<List<SessionHistory>> =
+//        MutableStateFlow(listOf())
+//    val chatSessionHistory: MutableStateFlow<List<SessionHistory>> = _chatSessionHistory
+    val TEMPERATURE = 0.2
+    val MAX_TOKENS = 300
+    val FREQUENCY_PENALTY = 0.5
+    val PRESENCE_PENALTY = 0.5
+
+    init {
+        startNewSession()
+    }
 
     fun getCompletion(sessionId: String) {
-        addMessageToHistory(
-            sessionId,
-            _chatUiState.value.userInput.trim(),
-            ChatMessageType.SENT
-        )
+        viewModelScope.launch {
+            _chatUiState.value = _chatUiState.value.copy(
+                loading = true,
+                error = "",
+                userInput = _chatUiState.value.userInput,
+                message = "",
+
+                )
+            Log.d("ChatMessage", "getCompletion: ${_chatUiState.value.userInput}")
+            val previousMessages = chatMessageRepository.getChatMessagesSuspend(sessionId)
+            val chatMessageContext: MutableList<ChatMessage> = mutableListOf()
+
+            var totalCharCount = 0
+
+            previousMessages.forEach { chatMessageEntity ->
+                totalCharCount += chatMessageEntity.content.length
+                if (totalCharCount > 3000) {
+                    return@forEach
+                }
+                chatMessageContext.add(
+                    ChatMessage(
+                        role = if (chatMessageEntity.type == ChatMessageType.SENT) ChatRole.User else ChatRole.Assistant,
+                        content = chatMessageEntity.content
+                    )
+                )
+            }
+
+            Log.d("ChatMessage", chatMessageContext.toString())
+
+            addMessageToHistory(
+                sessionId,
+                _chatUiState.value.userInput.trim(),
+                ChatMessageType.SENT
+            )
 //        val chatMessage = ChatMessageEntity(
 //            sessionId = sessionId,
 //            content = "",
 //            type = ChatMessageType.RECEIVED
 //        )
 //        addMessageToHistory(chatMessage)
-        val openAI =
-            OpenAI("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") // Create an instance of OpenAI
-        val chatCompletionRequest = ChatCompletionRequest(
-            model = ModelId("gpt-3.5-turbo"),
-            messages = listOf(
-                ChatMessage(
-                    role = ChatRole.System,
-                    content = OpenAiPrompt.systemPrompt
-                ),
-                ChatMessage(
-                    role = ChatRole.User,
-                    content = _chatUiState.value.userInput.trim()
-                )
-            )
-        )
+            val openAI =
+                OpenAI("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") // Create an instance of OpenAI
 
-        viewModelScope.launch {
-            _chatUiState.value = _chatUiState.value.copy(loading = true)
+            val chatCompletionRequest = ChatCompletionRequest(
+                model = ModelId("gpt-3.5-turbo"),
+                messages = listOf(
+                    ChatMessage(
+                        role = ChatRole.System,
+                        content = OpenAiPrompt.systemPrompt
+                    ),
+                    *chatMessageContext.toTypedArray(),
+                    ChatMessage(
+                        role = ChatRole.User,
+                        content = _chatUiState.value.userInput.trim()
+                    )
+                ),
+                temperature = TEMPERATURE,
+                maxTokens = MAX_TOKENS,
+                topP = 1.0,
+                frequencyPenalty = FREQUENCY_PENALTY,
+                presencePenalty = PRESENCE_PENALTY,
+            )
+
+            Log.d("ChatMessage", chatCompletionRequest.messages.toString())
+
+
 //            val lastMessage = chatMessageRepository.getLatestMessage()
 
             try {
@@ -157,12 +201,8 @@ class HomeScreenViewModel(
     }
 
     fun startNewSession() {
-        val sessionId = UUID.randomUUID().toString()
-        preferencesHelper.saveSessionId(sessionId)
-        _sessionId.value = sessionId
+        _sessionId.value = UUID.randomUUID().toString()
     }
-
-    fun getSessionId(): String? = preferencesHelper.getSessionId()
 
     fun onUserInputChanged(it: String) {
         _chatUiState.value = _chatUiState.value.copy(userInput = it)
@@ -173,7 +213,6 @@ class HomeScreenViewModel(
     }
 
     fun logout() {
-        preferencesHelper.clearSessionId()
         accountServiceRepository.signOut()
     }
 
