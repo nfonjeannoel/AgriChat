@@ -23,6 +23,7 @@ import com.heavyair.agrichat.ui.screens.authentication.SignUpScreen
 import com.heavyair.agrichat.ui.screens.common.AppTopAppBar
 import com.heavyair.agrichat.ui.screens.home.HomeScreen
 import com.heavyair.agrichat.ui.screens.home.HomeTopAppBar
+import com.heavyair.agrichat.ui.screens.shopping.ShoppingScreen
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,6 +59,17 @@ fun AgriChatNavHost(
                         titleStrRes = SignUpDestination.titleRes,
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+
+                ShoppingDestination.route -> {
+//                    AppTopAppBar(
+//                        titleStrRes = ShoppingDestination.titleRes,
+//                        modifier = Modifier.fillMaxWidth(),
+//                        canNavigateBack = true,
+//                        onNavigateUp = {
+//                            navController.navigateUp()
+//                        }
+//                    )
                 }
             }
         }
@@ -118,6 +130,21 @@ fun AgriChatNavHost(
                                 inclusive = true
                             }
                         }
+                    },
+                    onShoppingClicked = {
+                        navController.navigate(ShoppingDestination.route) {
+                            popUpTo(HomeDestination.route) {
+                                inclusive = false
+                            }
+                        }
+                    }
+                )
+            }
+
+            composable(ShoppingDestination.route) {
+                ShoppingScreen(
+                    onNavigateUp = {
+                        navController.navigateUp()
                     }
                 )
             }

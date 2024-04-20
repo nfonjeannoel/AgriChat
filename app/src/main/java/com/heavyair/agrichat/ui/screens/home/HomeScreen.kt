@@ -20,12 +20,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -51,6 +54,7 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -93,12 +97,14 @@ fun DrawerContent(
     onHistorySessionClicked: (String) -> Unit,
     sessionHistory: List<SessionHistory>,
     onLogout: () -> Unit,
-    currentUser: FirebaseUser?
+    currentUser: FirebaseUser?,
+    onShoppingClicked: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .wrapContentWidth()
             .padding(16.dp)
+            .sizeIn(maxWidth = 250.dp)
 
     ) {
         // App Logo
@@ -106,12 +112,12 @@ fun DrawerContent(
             painter = painterResource(id = R.drawable.agrichat_load_logo),
             contentDescription = null,
             modifier = Modifier
-                .size(120.dp)
-                .padding(16.dp)
+                .fillMaxWidth()
+                .heightIn(max = 80.dp)
                 .wrapContentHeight(Alignment.CenterVertically)
                 .align(Alignment.CenterHorizontally),
 
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Fit
         )
         NavDrawerLine()
 
@@ -121,7 +127,7 @@ fun DrawerContent(
             navIcon = Icons.Outlined.Sms
         )
         NavDrawerItem(
-            onItemClick = { },
+            onItemClick = { onShoppingClicked() },
             menuName = "Purchase",
             navIcon = Icons.Outlined.ShoppingCart
         )
@@ -160,6 +166,9 @@ fun DrawerContent(
                 }
             }
         }
+
+        NavDrawerLine()
+        SuggestionRow()
         currentUser?.email?.let {
             Text(
                 text = it,
@@ -174,6 +183,40 @@ fun DrawerContent(
         )
 
 
+    }
+}
+
+@Composable
+fun SuggestionRow() {
+    val items = listOf(
+        "Inorganic",
+        "Organic",
+        "Fertilizer",
+        "Pesticide",
+        "Herbicide",
+        "Fungicide",
+        "Insecticide",
+        "Seed",
+        "Fertilizer",
+        "Pesticide",
+        "Herbicide",
+        "Fungicide",
+        "Insecticide",
+        "Seed"
+    )
+
+
+    LazyRow() {
+        items(items = items) { item ->
+            SuggestionChip(
+                label = { Text(text = item) },
+                onClick = {
+                    Log.d("SuggestionRow", "onClick: $item")
+                },
+                modifier = Modifier
+                    .padding(4.dp)
+            )
+        }
     }
 }
 
@@ -222,6 +265,7 @@ fun NavDrawerItem(
 @Composable
 fun HomeScreen(
     onSignOut: () -> Unit,
+    onShoppingClicked: () -> Unit,
     viewModel: HomeScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
 //    var sessionId = viewModel.getSessionId()
@@ -270,7 +314,17 @@ fun HomeScreen(
                         viewModel.logout()
                         onSignOut()
                     },
-                    currentUser = currentUser
+                    currentUser = currentUser,
+                    onShoppingClicked = {
+                        onShoppingClicked()
+
+                        scope.launch {
+                            drawerState.apply {
+                                if (isClosed) open() else close()
+                            }
+                        }
+
+                    }
                 )
             }
         },

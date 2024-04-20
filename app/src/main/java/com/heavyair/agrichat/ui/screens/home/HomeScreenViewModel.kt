@@ -55,6 +55,8 @@ class HomeScreenViewModel(
         startNewSession()
     }
 
+
+
     fun getCompletion(sessionId: String) {
         viewModelScope.launch {
             _chatUiState.value = _chatUiState.value.copy(
@@ -97,10 +99,10 @@ class HomeScreenViewModel(
 //        )
 //        addMessageToHistory(chatMessage)
             val openAI =
-                OpenAI("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") // Create an instance of OpenAI
+                OpenAI("") // Create an instance of OpenAI
 
             val chatCompletionRequest = ChatCompletionRequest(
-                model = ModelId("gpt-3.5-turbo"),
+                model = ModelId("gpt-4"),
                 messages = listOf(
                     ChatMessage(
                         role = ChatRole.System,

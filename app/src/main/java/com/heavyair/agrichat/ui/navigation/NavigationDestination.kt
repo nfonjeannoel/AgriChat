@@ -23,3 +23,8 @@ object HomeDestination : NavigationDestination {
     override val route: String = "home"
     override val titleRes: Int = R.string.home
 }
+
+object ShoppingDestination : NavigationDestination {
+    override val route: String = "shopping"
+    override val titleRes: Int = R.string.shopping
+}
